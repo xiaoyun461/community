@@ -1,1 +1,12 @@
-
+github-cliend-id: fdabf3c6e3f186d0a1c1
+github-cliend-secret: d334d05b50949aa0d487dc064545e01f0f96b1bd
+github-redirect-uri: http://localhost:8080/callback
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.2.211:3306/community
+    username: root
+    password: 123456
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
