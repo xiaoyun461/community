@@ -4,9 +4,10 @@ github-redirect-uri: http://localhost:8080/callback
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.2.211:3306/community
+    url: jdbc:mysql://192.168.2.211:3306/community?useUnicode=true&characterEncoding=utf-8
     username: root
     password: 123456
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
