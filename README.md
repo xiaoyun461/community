@@ -41,6 +41,31 @@ ALTER TABLE `community`.`user`
 ADD COLUMN `bio` varchar(255) NULL AFTER `gmt_modified`;
 ```
 
+#mybatis Generator 
+```text
+mvn -Dmybatis.generator.overwrite=true mybatis-generator:generate
+```
+
+#mybatis plus
+主键id注解要为
+```text
+  @TableId(type = IdType.AUTO)
+```
+
+```text
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-generator</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+
+```
+
 
 
 

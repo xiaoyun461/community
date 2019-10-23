@@ -1,9 +1,12 @@
 package com.xiaoyun.community.service;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.xiaoyun.community.mapper.UserMapper;
 import com.xiaoyun.community.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class UserService {
@@ -13,17 +16,17 @@ public class UserService {
 
 
     public void createOrUpdate(User user) {
-        User dbUser = userMapper.findByAccountId(user.getAccountId());
-        if (dbUser == null) {
+
+        User selectUser = userMapper.selectOne(Wrappers.<User>lambdaQuery().eq(User::getAccountId, user.getAccountId()));
+        if (selectUser != null) {
             user.setGmtCreate(System.currentTimeMillis());
             user.setGmtModified(user.getGmtCreate());
-            userMapper.insert(dbUser);
+            user.setId(selectUser.getId());
+            userMapper.updateById(user);
         } else {
-            dbUser.setGmtCreate(System.currentTimeMillis());
-            dbUser.setAvatarUrl(user.getAvatarUrl());
-            dbUser.setName(user.getName());
-            dbUser.setToken(user.getToken());
-            userMapper.update(dbUser);
+            user.setGmtCreate(System.currentTimeMillis());
+            user.setAvatarUrl(user.getAvatarUrl());
+            userMapper.insert(user);
         }
     }
 }

@@ -2,7 +2,6 @@ package com.xiaoyun.community.controller;
 
 import com.xiaoyun.community.dto.AccessTokenDTO;
 import com.xiaoyun.community.dto.GithubUser;
-import com.xiaoyun.community.mapper.UserMapper;
 import com.xiaoyun.community.model.User;
 import com.xiaoyun.community.provider.GithubHttpClentProvider;
 import com.xiaoyun.community.service.UserService;
@@ -65,6 +64,7 @@ public class AuthorizeController {
             user.setName(githubUser.getName());
             user.setAccountId(String.valueOf(githubUser.getId()));
             user.setAvatarUrl(githubUser.getAvatarUrl());
+
             userService.createOrUpdate(user);
             response.addCookie(new Cookie("token", token));
 

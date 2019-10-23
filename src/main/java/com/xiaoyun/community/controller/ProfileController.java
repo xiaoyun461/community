@@ -1,7 +1,6 @@
 package com.xiaoyun.community.controller;
 
 import com.xiaoyun.community.dto.PaginationDTO;
-import com.xiaoyun.community.mapper.UserMapper;
 import com.xiaoyun.community.model.User;
 import com.xiaoyun.community.service.QuestionService;
 import org.springframework.beans.factory.annotation.Autowired;

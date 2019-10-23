@@ -1,8 +1,6 @@
 package com.xiaoyun.community.controller;
 
 import com.xiaoyun.community.dto.QuestionDTO;
-import com.xiaoyun.community.mapper.QuestionMapper;
-import com.xiaoyun.community.mapper.UserMapper;
 import com.xiaoyun.community.model.Question;
 import com.xiaoyun.community.model.User;
 import com.xiaoyun.community.service.QuestionService;
@@ -14,7 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
 @Controller
@@ -74,10 +71,12 @@ public class PublishController {
         question.setTitle(title);
         question.setDescription(description);
         question.setTag(tag);
+
         question.setCreator(user.getId());
         question.setGmtCreate(System.currentTimeMillis());
         question.setGmtModified(question.getGmtCreate());
         question.setId(id);
+
         questionService.createOrUpdate(question);
         return "redirect:/";
     }
