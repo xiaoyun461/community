@@ -2,6 +2,7 @@
 https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
 
 ##flywaydb插件
+mvn flyway:migrate
 ```xml
  <plugin>
                 <groupId>org.flywaydb</groupId>

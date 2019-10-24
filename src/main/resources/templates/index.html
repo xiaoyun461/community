@@ -11,6 +11,15 @@
     <script src="js/bootstrap.js" type="application/javascript"></script>
 
 </head>
+<script type="application/javascript">
+    window.onload = function () {
+        var closable = window.localStorage.getItem("closable");
+        if (closable == "true") {
+            window.close();
+            window.localStorage.removeItem("closable");
+        }
+    }
+</script>
 <body>
 
 <div th:insert="~{navigation :: nav}"></div>
@@ -35,7 +44,7 @@
                     </a>
                 </div>
                 <div class="media-body">
-                    <h4 class="media-heading" >
+                    <h4 class="media-heading">
                         <a th:href="'question/'+${question.id}" th:text="${question.title}"></a>
                     </h4>
 

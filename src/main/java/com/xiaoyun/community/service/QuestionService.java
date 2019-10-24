@@ -1,9 +1,15 @@
 package com.xiaoyun.community.service;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.injector.methods.additional.AlwaysUpdateSomeColumnById;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.additional.update.impl.UpdateChainWrapper;
 import com.xiaoyun.community.dto.PaginationDTO;
 import com.xiaoyun.community.dto.QuestionDTO;
+import com.xiaoyun.community.exception.CustomizeErrorCode;
+import com.xiaoyun.community.exception.CustomizeException;
 import com.xiaoyun.community.mapper.QuestionMapper;
 import com.xiaoyun.community.mapper.UserMapper;
 import com.xiaoyun.community.model.Question;
@@ -77,7 +83,7 @@ public class QuestionService {
         return null;
     }
 
-    public PaginationDTO list(Integer userId, Integer page, Integer size) {
+    public PaginationDTO list(Long userId, Integer page, Integer size) {
 
         PaginationDTO paginationDTO = new PaginationDTO();
         Integer totalPage;
@@ -119,9 +125,12 @@ public class QuestionService {
 
     }
 
-    public QuestionDTO getById(Integer id) {
-
+    public QuestionDTO getById(Long id) {
         Question question = questionMapper.selectById(id);
+        if (question == null) {
+            throw new CustomizeException(CustomizeErrorCode.QUERTION_NOT_FOUND);
+        }
+
         QuestionDTO questionDTO = new QuestionDTO();
         BeanUtils.copyProperties(question, questionDTO);
         User user = getUser(question);
@@ -136,7 +145,14 @@ public class QuestionService {
             question.setGmtModified(question.getGmtCreate());
             questionMapper.insert(question);
         } else {
-            questionMapper.updateById(question);
+            int i = questionMapper.updateById(question);
+            if (i != 1) {
+                throw new CustomizeException(CustomizeErrorCode.QUERTION_NOT_FOUND);
+            }
         }
+    }
+
+    public void incVic(Long id) {
+        questionMapper.update(null, new UpdateWrapper<Question>().lambda().eq(Question::getId, questionMapper.selectById(id).getId()).set(Question::getViewCount, questionMapper.selectById(id).getViewCount() + 1));
     }
 }
