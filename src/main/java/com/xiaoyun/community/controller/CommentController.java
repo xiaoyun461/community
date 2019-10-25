@@ -1,7 +1,9 @@
 package com.xiaoyun.community.controller;
 
 import com.xiaoyun.community.dto.CommentCreateDTO;
+import com.xiaoyun.community.dto.CommentDTO;
 import com.xiaoyun.community.dto.ResultDTO;
+import com.xiaoyun.community.enums.CommentTypeEnum;
 import com.xiaoyun.community.exception.CustomizeErrorCode;
 import com.xiaoyun.community.model.Comment;
 import com.xiaoyun.community.model.User;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @Controller
 public class CommentController {
@@ -41,5 +44,12 @@ public class CommentController {
 
         commemtService.insert(comment);
         return ResultDTO.okOf();
+    }
+
+    @GetMapping(value = "/comment/{id}")
+    @ResponseBody
+    public ResultDTO<List> comments(@PathVariable(name = "id") Long id) {
+        List<CommentDTO> commentDTOS = commemtService.listByTatgetId(id, CommentTypeEnum.COMMENT);
+        return ResultDTO.okOf(commentDTOS);
     }
 }

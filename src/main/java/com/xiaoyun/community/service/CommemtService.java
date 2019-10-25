@@ -46,6 +46,7 @@ public class CommemtService {
                 throw new CustomizeException(CustomizeErrorCode.COMMENT_NOT_FOUND);
             }
             commentMapper.insert(comment);
+            commentMapper.update(dbComment, new UpdateWrapper<Comment>().lambda().eq(Comment::getId, dbComment.getId()).set(Comment::getCommentCount, dbComment.getCommentCount() + 1));
         } else {
             Question question = questionMapper.selectById(comment.getParentId());
             if (question == null) {
@@ -54,11 +55,12 @@ public class CommemtService {
             commentMapper.insert(comment);
             questionMapper.update(null, new UpdateWrapper<Question>().lambda().eq(Question::getId, question.getId()).set(Question::getCommentCount, question.getCommentCount() + 1));
         }
+
     }
 
-    public List<CommentDTO> listByQuestionId(Long id) {
+    public List<CommentDTO> listByTatgetId(Long id, CommentTypeEnum type) {
         List<Comment> comments = commentMapper.selectList(Wrappers.<Comment>lambdaQuery()
-                .eq(Comment::getParentId, id).eq(Comment::getType, CommentTypeEnum.QUESTION.getType()).orderByDesc(Comment::getGmtCreate));
+                .eq(Comment::getParentId, id).eq(Comment::getType, type.getType()).orderByDesc(Comment::getGmtCreate));
         if (comments.size() == 0) {
             return new ArrayList<>();
         }
@@ -77,4 +79,5 @@ public class CommemtService {
         return commentDTOs;
 
     }
+
 }

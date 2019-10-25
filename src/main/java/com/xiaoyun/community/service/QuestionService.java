@@ -53,7 +53,7 @@ public class QuestionService {
         Integer offset = size * (page - 1);
 
         List<Question> questions =
-                questionMapper.selectList(Wrappers.<Question>lambdaQuery().last(new StringBuffer("limit " + offset + "," + size).toString()));
+                questionMapper.selectList(Wrappers.<Question>lambdaQuery().orderByDesc(Question::getGmtCreate).last(new StringBuffer("limit " + offset + "," + size).toString()));
 
 
         List<QuestionDTO> questionDTOList = new ArrayList<>();
