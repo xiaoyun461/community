@@ -1,11 +1,7 @@
 package com.xiaoyun.community.service;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.injector.methods.additional.AlwaysUpdateSomeColumnById;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.additional.update.impl.UpdateChainWrapper;
 import com.xiaoyun.community.dto.PaginationDTO;
 import com.xiaoyun.community.dto.QuestionDTO;
 import com.xiaoyun.community.exception.CustomizeErrorCode;
@@ -14,12 +10,15 @@ import com.xiaoyun.community.mapper.QuestionMapper;
 import com.xiaoyun.community.mapper.UserMapper;
 import com.xiaoyun.community.model.Question;
 import com.xiaoyun.community.model.User;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class QuestionService {
@@ -68,7 +67,7 @@ public class QuestionService {
             questionDTO.setUser(user);
             questionDTOList.add(questionDTO);
         }
-        paginationDTO.setQuestions(questionDTOList);
+        paginationDTO.setData(questionDTOList);
 
 
         return paginationDTO;
@@ -118,7 +117,7 @@ public class QuestionService {
             questionDTO.setUser(user);
             questionDTOList.add(questionDTO);
         }
-        paginationDTO.setQuestions(questionDTOList);
+        paginationDTO.setData(questionDTOList);
 
 
         return paginationDTO;
@@ -140,6 +139,7 @@ public class QuestionService {
     }
 
     public void createOrUpdate(Question question) {
+
         if (question.getId() == null) {
             question.setGmtCreate(System.currentTimeMillis());
             question.setGmtModified(question.getGmtCreate());
@@ -154,5 +154,23 @@ public class QuestionService {
 
     public void incVic(Long id) {
         questionMapper.update(null, new UpdateWrapper<Question>().lambda().eq(Question::getId, questionMapper.selectById(id).getId()).set(Question::getViewCount, questionMapper.selectById(id).getViewCount() + 1));
+    }
+
+    public List<QuestionDTO> selectRelated(QuestionDTO queryDTO) {
+        if (StringUtils.isBlank(queryDTO.getTag())) {
+            return new ArrayList<>();
+        }
+        String[] tags = StringUtils.split(queryDTO.getTag(), ",");
+        String regexpTag = Arrays.stream(tags).collect(Collectors.joining("|", "'", "'"));
+
+        List<Question> questions = questionMapper.selectList(Wrappers.<Question>lambdaQuery().ne(Question::getId, queryDTO.getId()).apply(new StringBuffer("tag regexp ").append(regexpTag).toString()));
+
+        List<QuestionDTO> questionDTOs = questions.stream().map(q -> {
+            QuestionDTO questionDTO = new QuestionDTO();
+            BeanUtils.copyProperties(q, questionDTO);
+            return questionDTO;
+        }).collect(Collectors.toList());
+
+        return questionDTOs;
     }
 }

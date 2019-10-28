@@ -42,7 +42,7 @@ public class CommentController {
         comment.setGmtCreate(comment.getGmtModified());
         comment.setCommentator(user.getId());
 
-        commemtService.insert(comment);
+        commemtService.insert(comment,user);
         return ResultDTO.okOf();
     }
 
