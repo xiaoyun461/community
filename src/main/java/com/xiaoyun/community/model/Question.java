@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * <p>
  *
@@ -13,7 +15,7 @@ import lombok.Data;
  * @since 2019-10-23
  */
 @Data
-public class Question {
+public class Question implements Serializable {
 
 
     private static final long serialVersionUID = 1L;

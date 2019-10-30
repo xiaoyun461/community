@@ -19,12 +19,14 @@ public class UserService {
 
         User selectUser = userMapper.selectOne(Wrappers.<User>lambdaQuery().eq(User::getAccountId, user.getAccountId()));
         if (selectUser != null) {
-            user.setGmtCreate(System.currentTimeMillis());
-            user.setGmtModified(user.getGmtCreate());
+            user.setGmtModified(System.currentTimeMillis());
             user.setId(selectUser.getId());
+
             userMapper.updateById(user);
+
         } else {
             user.setGmtCreate(System.currentTimeMillis());
+            user.setGmtModified(user.getGmtCreate());
             user.setAvatarUrl(user.getAvatarUrl());
             userMapper.insert(user);
         }

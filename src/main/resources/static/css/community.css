@@ -131,3 +131,8 @@ body {
 .question-wechat {
     width: 100%;
 }
+
+.footer {
+    padding: 12px 30%;
+    color: #666;
+}

@@ -70,6 +70,7 @@ public class AuthorizeController {
 
             return "redirect:/";
         } else {
+            log.error("callback get github error,{}", githubUser);
             return "redirect:/";
         }
     }
