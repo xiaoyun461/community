@@ -35,11 +35,11 @@ public class SessionInterceptor implements HandlerInterceptor {
                 if (cookie.getName().equals("token")) {
                     String token = cookie.getValue();
                     User user;
-                    if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, token, "user"))) {
-                        user = (User) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, token, "user"));
+                    if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, token, RedisKeyEnum.USERBYTOKEN))) {
+                        user = (User) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, token, RedisKeyEnum.USERBYTOKEN));
                     } else {
                         user = userMapper.selectOne(Wrappers.<User>lambdaQuery().eq(User::getToken, token));
-                        redisUtil.set((RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, token, "user")), user, TimeUnit.DAYS.toMillis(30L));
+                        redisUtil.set((RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, token, RedisKeyEnum.USERBYTOKEN)), user, TimeUnit.DAYS.toMillis(30L));
                     }
                     if (user != null) {
                         request.getSession().setAttribute("user", user);

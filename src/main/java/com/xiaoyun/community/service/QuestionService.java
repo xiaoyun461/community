@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,19 +44,14 @@ public class QuestionService {
         PaginationDTO paginationDTO = new PaginationDTO();
         Integer totalCount;
         if (search == null || "".equals(search)) {
-            if (redisUtil.hasKey(getCountCache(null))) {
-                totalCount = (Integer) redisUtil.get(getCountCache(null));
+            if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, "null", RedisKeyEnum.QUESTIONCOUNTALL))) {
+                totalCount = (Integer) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, "null", RedisKeyEnum.QUESTIONCOUNTALL));
             } else {
                 totalCount = questionMapper.selectCount(null);
-                redisUtil.set(getCountCache(null), totalCount, TimeUnit.DAYS.toMillis(30L));
+                redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, "null", RedisKeyEnum.QUESTIONCOUNTALL), totalCount, RedisTypeKey.TIMEOUTREDIS);
             }
         } else {
-            if (redisUtil.hasKey(getCountCache(search))) {
-                totalCount = (Integer) redisUtil.get(getCountCache(search));
-            } else {
-                totalCount = questionMapper.selectCount(Wrappers.<Question>lambdaQuery().apply(new StringBuffer("title regexp ").append(search).toString()));
-                redisUtil.set(getCountCache(search), totalCount, TimeUnit.DAYS.toMillis(30L));
-            }
+            totalCount = questionMapper.selectCount(Wrappers.<Question>lambdaQuery().apply(new StringBuffer("title regexp ").append(search).toString()));
         }
         Integer totalPage;
         if (totalCount % size == 0) {
@@ -78,27 +72,17 @@ public class QuestionService {
         List<Question> questions;
 
         if (search == null || "".equals(search)) {
-            if (redisUtil.hasKey(getGetCreateCache(RedisKeyEnum.SELECTLIST, "getCreate"))) {
-                questions  = (List<Question>) redisUtil.get(getGetCreateCache(RedisKeyEnum.SELECTLIST, "getCreate"));
-            } else {
-                questions =
-                        questionMapper.selectList(Wrappers.<Question>lambdaQuery().
-                                orderByDesc(Question::getGmtCreate).
-                                last(new StringBuffer("limit " + offset + "," + size).toString()));
-                redisUtil.set(getGetCreateCache(RedisKeyEnum.SELECTLIST, "getCreate"), questions, TimeUnit.DAYS.toMillis(30L));
-            }
+            questions =
+                    questionMapper.selectList(Wrappers.<Question>lambdaQuery().
+                            orderByDesc(Question::getGmtCreate).
+                            last(new StringBuffer("limit " + offset + "," + size).toString()));
 
         } else {
-            if (redisUtil.hasKey(getGetCreateCache(RedisKeyEnum.SELECTLIST, search))) {
-                questions = (List<Question>) redisUtil.get(getGetCreateCache(RedisKeyEnum.SELECTLIST, search));
-            } else {
-                questions =
-                        questionMapper.selectList(Wrappers.<Question>lambdaQuery().
-                                orderByDesc(Question::getGmtCreate).
-                                apply(new StringBuffer("title regexp ").append(search).toString()).
-                                last(new StringBuffer("limit " + offset + "," + size).toString()));
-                redisUtil.set((getGetCreateCache(RedisKeyEnum.SELECTLIST, search)), questions, TimeUnit.DAYS.toMillis(30L));
-            }
+            questions =
+                    questionMapper.selectList(Wrappers.<Question>lambdaQuery().
+                            orderByDesc(Question::getGmtCreate).
+                            apply(new StringBuffer("title regexp ").append(search).toString()).
+                            last(new StringBuffer("limit " + offset + "," + size).toString()));
         }
 
         List<QuestionDTO> questionDTOList = new ArrayList<>();
@@ -121,20 +105,14 @@ public class QuestionService {
 
     }
 
-    private String getGetCreateCache(RedisKeyEnum selectlist, String getCreate) {
-        return RedisTypeKey.keyName(selectlist, getCreate, "question");
-    }
-
-    private String getCountCache(String value) {
-        if (value == null) {
-            return getGetCreateCache(RedisKeyEnum.SELECTCOUNT, "null");
-        } else {
-            return getGetCreateCache(RedisKeyEnum.SELECTCOUNT, value);
-        }
-    }
-
     private User getUser(Question question) {
-        User users = userMapper.selectById(question.getCreator());
+        User users;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, question.getCreator(), RedisKeyEnum.USERBYID))) {
+            users = (User) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, question.getCreator(), RedisKeyEnum.USERBYID));
+        } else {
+            users = userMapper.selectById(question.getCreator());
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, question.getCreator(), RedisKeyEnum.USERBYID), users, RedisTypeKey.TIMEOUTREDIS);
+        }
         if (users != null) {
             return users;
         }
@@ -145,7 +123,13 @@ public class QuestionService {
 
         PaginationDTO paginationDTO = new PaginationDTO();
         Integer totalPage;
-        Integer totalCount = questionMapper.selectCount(Wrappers.<Question>lambdaQuery().eq(Question::getCreator, userId));
+        Integer totalCount;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, userId, RedisKeyEnum.QUESTIONCOUNTBYCREATOR))) {
+            totalCount = (Integer) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, userId, RedisKeyEnum.QUESTIONCOUNTBYCREATOR));
+        } else {
+            totalCount = questionMapper.selectCount(Wrappers.<Question>lambdaQuery().eq(Question::getCreator, userId));
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, userId, RedisKeyEnum.QUESTIONCOUNTBYCREATOR), totalCount, RedisTypeKey.TIMEOUTREDIS);
+        }
 
         if (totalCount % size == 0) {
             totalPage = totalCount / size;
@@ -163,9 +147,15 @@ public class QuestionService {
         paginationDTO.setPagination(totalPage, page);
 
         Integer offset = size * (page - 1);
+        List<Question> questions;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTLIST, userId, RedisKeyEnum.QUESTIONSBYCREATOR))) {
+            questions = (List<Question>) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTLIST, userId, RedisKeyEnum.QUESTIONSBYCREATOR));
+        } else {
+            questions =
+                    questionMapper.selectList(Wrappers.<Question>lambdaQuery().eq(Question::getCreator, userId).last((new StringBuffer("limit " + offset + "," + size).toString())));
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTLIST, userId, RedisKeyEnum.QUESTIONSBYCREATOR), questions, RedisTypeKey.TIMEOUTREDIS);
+        }
 
-        List<Question> questions =
-                questionMapper.selectList(Wrappers.<Question>lambdaQuery().eq(Question::getCreator, userId).last((new StringBuffer("limit " + offset + "," + size).toString())));
         List<QuestionDTO> questionDTOList = new ArrayList<>();
 
 
@@ -184,7 +174,13 @@ public class QuestionService {
     }
 
     public QuestionDTO getById(Long id) {
-        Question question = questionMapper.selectById(id);
+        Question question;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.QUESTIONBYID))) {
+            question = (Question) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.QUESTIONBYID));
+        } else {
+            question = questionMapper.selectById(id);
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.QUESTIONBYID), question, RedisTypeKey.TIMEOUTREDIS);
+        }
         if (question == null) {
             throw new CustomizeException(CustomizeErrorCode.QUERTION_NOT_FOUND);
         }
@@ -209,10 +205,25 @@ public class QuestionService {
                 throw new CustomizeException(CustomizeErrorCode.QUERTION_NOT_FOUND);
             }
         }
+        delQuestionCache(question);
+
+        redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, question.getId(), RedisKeyEnum.QUESTIONBYID), question, RedisTypeKey.TIMEOUTREDIS);
     }
 
+
     public void incVic(Long id) {
-        questionMapper.update(null, new UpdateWrapper<Question>().lambda().eq(Question::getId, questionMapper.selectById(id).getId()).set(Question::getViewCount, questionMapper.selectById(id).getViewCount() + 1));
+        Question question;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.QUESTIONBYID))) {
+            question = (Question) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.QUESTIONBYID));
+        } else {
+            question = questionMapper.selectById(id);
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.QUESTIONBYID), question, RedisTypeKey.TIMEOUTREDIS);
+        }
+        questionMapper.update(null, new UpdateWrapper<Question>().lambda().eq(Question::getId, question.getId()).set(Question::getViewCount, questionMapper.selectById(id).getViewCount() + 1));
+
+        delQuestionCache(question);
+
+
     }
 
     public List<QuestionDTO> selectRelated(QuestionDTO queryDTO) {
@@ -221,9 +232,8 @@ public class QuestionService {
         }
         String[] tags = StringUtils.split(queryDTO.getTag(), ",");
         String regexpTag = Arrays.stream(tags).collect(Collectors.joining("|", "'", "'"));
-
-        List<Question> questions = questionMapper.selectList(Wrappers.<Question>lambdaQuery().ne(Question::getId, queryDTO.getId()).apply(new StringBuffer("tag regexp ").append(regexpTag).toString()));
-
+        List<Question> questions;
+        questions = questionMapper.selectList(Wrappers.<Question>lambdaQuery().ne(Question::getId, queryDTO.getId()).apply(new StringBuffer("tag regexp ").append(regexpTag).toString()));
         List<QuestionDTO> questionDTOs = questions.stream().map(q -> {
             QuestionDTO questionDTO = new QuestionDTO();
             BeanUtils.copyProperties(q, questionDTO);
@@ -231,5 +241,12 @@ public class QuestionService {
         }).collect(Collectors.toList());
 
         return questionDTOs;
+    }
+
+    public void delQuestionCache(Question question) {
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, "null", RedisKeyEnum.QUESTIONCOUNTALL));
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, question.getId(), RedisKeyEnum.QUESTIONBYID));
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, question.getCreator(), RedisKeyEnum.QUESTIONCOUNTBYCREATOR));
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTLIST, question.getCreator(), RedisKeyEnum.QUESTIONSBYCREATOR));
     }
 }

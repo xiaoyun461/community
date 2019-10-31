@@ -34,7 +34,13 @@ public class NotificationService {
     public PaginationDTO list(Long userId, Integer page, Integer size) {
         PaginationDTO paginationDTO = new PaginationDTO();
         Integer totalPage;
-        Integer totalCount = notificationMapper.selectCount(Wrappers.<Notification>lambdaQuery().eq(Notification::getReceiver, userId));
+        Integer totalCount;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, userId, RedisKeyEnum.NOTIFICATIONCOUNTBYRECEIVER))) {
+            totalCount = (Integer) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, userId, RedisKeyEnum.NOTIFICATIONCOUNTBYRECEIVER));
+        } else {
+            totalCount = notificationMapper.selectCount(Wrappers.<Notification>lambdaQuery().eq(Notification::getReceiver, userId));
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, userId, RedisKeyEnum.NOTIFICATIONCOUNTBYRECEIVER), totalCount, RedisTypeKey.TIMEOUTREDIS);
+        }
 
         if (totalCount % size == 0) {
             totalPage = totalCount / size;
@@ -52,8 +58,8 @@ public class NotificationService {
         paginationDTO.setPagination(totalPage, page);
 
         Integer offset = size * (page - 1);
-
-        List<Notification> notifications =
+        List<Notification> notifications;
+        notifications =
                 notificationMapper.selectList(Wrappers.<Notification>lambdaQuery().eq(Notification::getReceiver, userId).orderByDesc(Notification::getGmtCreate).last((new StringBuffer("limit " + offset + "," + size).toString())));
 
         if (notifications.size() == 0) {
@@ -74,19 +80,25 @@ public class NotificationService {
 
     public Long unreadCount(Long id) {
         Integer integer;
-        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, id, "unreadCount"))) {
-            integer = (Integer) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, id, "unreadCount"));
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, id, RedisKeyEnum.NOTIFICATIONSCOUNTBYRECEIVERANDSTATUS, NotificationStatusEnum.UNREAD.getStatus()))) {
+            integer = (Integer) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, id, RedisKeyEnum.NOTIFICATIONSCOUNTBYRECEIVERANDSTATUS, NotificationStatusEnum.UNREAD.getStatus()));
         } else {
             integer = notificationMapper.selectCount(Wrappers.<Notification>lambdaQuery().
                     eq(Notification::getReceiver, id)
                     .eq(Notification::getStatus, NotificationStatusEnum.UNREAD.getStatus()));
-            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, id, "unreadCount"), integer, TimeUnit.DAYS.toMillis(30L));
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, id, RedisKeyEnum.NOTIFICATIONSCOUNTBYRECEIVERANDSTATUS, NotificationStatusEnum.UNREAD.getStatus()), integer, TimeUnit.DAYS.toMillis(30L));
         }
         return Long.valueOf(integer);
     }
 
     public NotificationDTO read(Long id, User user) {
-        Notification notification = notificationMapper.selectById(id);
+        Notification notification;
+        if (redisUtil.hasKey(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.NOTIFICATIONBYID))) {
+            notification = (Notification) redisUtil.get(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.NOTIFICATIONBYID));
+        } else {
+            notification = notificationMapper.selectById(id);
+            redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, id, RedisKeyEnum.NOTIFICATIONBYID), notification, RedisTypeKey.TIMEOUTREDIS);
+        }
         if (notification == null) {
             throw new CustomizeException(CustomizeErrorCode.NOTIFICATION);
         }
@@ -94,11 +106,22 @@ public class NotificationService {
             throw new CustomizeException(CustomizeErrorCode.READ_NOTFICATION_FAIL);
         }
         notification.setStatus(NotificationStatusEnum.READ.getStatus());
+
         notificationMapper.updateById(notification);
+
+        delNotificationCache(notification);
+        
+        redisUtil.set(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, notification.getId(), RedisKeyEnum.NOTIFICATIONBYID), notification, RedisTypeKey.TIMEOUTREDIS);
 
         NotificationDTO notificationDTO = new NotificationDTO();
         BeanUtils.copyProperties(notification, notificationDTO);
         notificationDTO.setTypeName(NotificationTypeEnum.nameOfType(notification.getType()));
         return notificationDTO;
+    }
+
+    private void delNotificationCache(Notification notification) {
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTONE, notification.getId(), RedisKeyEnum.NOTIFICATIONBYID));
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, notification.getReceiver(), RedisKeyEnum.NOTIFICATIONCOUNTBYRECEIVER));
+        redisUtil.del(RedisTypeKey.keyName(RedisKeyEnum.SELECTCOUNT, notification.getReceiver(), RedisKeyEnum.NOTIFICATIONSCOUNTBYRECEIVERANDSTATUS, NotificationStatusEnum.UNREAD.getStatus()));
     }
 }
